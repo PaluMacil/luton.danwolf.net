@@ -1,8 +1,10 @@
 from flask import jsonify, Blueprint, current_app, request, abort
 from app.db import Db
+from datetime import datetime
+import ifcfg
 
 
-observer = Blueprint('profile', __name__, url_prefix='observation')
+observer = Blueprint('profile', __name__, url_prefix='/observation')
 
 @observer.route('/')
 def home():
@@ -14,12 +16,27 @@ def list_observations():
     obs = db.observations.all()
     return jsonify(obs)
 
-@observer.route('/<id>')
-def observation(id):
+@observer.route('/<int:id>')
+def observation(id: int):
+    db = Db.instance(current_app)
     if request.method == 'GET':
-        pass
+        obs = db.observations.one(id)
+        if obs is None:
+            return abort(404)
+        return jsonify(obs)
     if request.method == 'POST':
-        pass
-    if request.method == 'PUT':
-        pass
-    else: return abort(400)
+        new_obs = request.get_json()
+        obs = db.observations.add(new_obs.mac, new_obs.ipv4, new_obs.observation_type, datetime.now())
+        if obs is None:
+            return abort(500)
+        return jsonify(obs)
+    return abort(400)
+
+@observer.route('/self', methods=['POST'])
+def observe_self():
+    interface = ifcfg.default_interface()
+    db = Db.instance(current_app)
+    obs = db.observations.add(interface.ether, interface.ipv4, interface.observation_type,  datetime.now())
+    if obs is None:
+        return abort(500)
+    return jsonify(obs)

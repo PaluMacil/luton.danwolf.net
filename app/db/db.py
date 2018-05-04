@@ -9,12 +9,15 @@ class Db:
         self._app = app
         self._conn = psycopg2.connect(app.config['DATABASE'], cursor_factory=RealDictCursor)
 
-        self.observations = ObservationRepo(self._conn)
+        self.observations = ObservationRepo(self)
+
+    def cursor(self):
+        return self._conn.cursor()
 
     def close(self):
         self._conn.close()
 
-    def execute(self, command: str):
+    def execute(self, command: str, query: None):
         self._conn.cursor().execute(command)
         self._conn.commit()
 
